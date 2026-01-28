@@ -14,8 +14,8 @@ tasks.named('wrapper', Wrapper).configure {
     distributionType = Wrapper.DistributionType.BIN
 }
 
-version = 1.0
-group = fr.lapsito.cobblecoins
+version = '1.0'
+group = 'fr.lapsito.cobblecoins'
 
 repositories {
     // Add here additional repositories if required by some of the dependencies below.

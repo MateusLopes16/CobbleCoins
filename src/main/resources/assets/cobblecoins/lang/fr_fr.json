@@ -1,0 +1,12 @@
+{
+  "item.cobblecoins.cobblecoin": "Cobblecoin",
+  "item.cobblecoins.cobblecoin.description": "Une petite pièce de faible valeur en gravelle.",
+
+  "item.cobblecoins.cobblenote": "Billet de Cobble",
+  "item.cobblecoins.cobblenote.description": "Un billet valant 64 Cobblecoins. Utile pour des transactions plus grandes.",
+
+  "item.cobblecoins.cobblewad": "Motte de Cobble",
+  "item.cobblecoins.cobblewad.description": "Une motte valant 64 billets (4096 Cobblecoins). Pour stocker de la valeur en masse.",
+
+  "itemGroup.cobblecoins.currency": "CobbleCoins"
+}

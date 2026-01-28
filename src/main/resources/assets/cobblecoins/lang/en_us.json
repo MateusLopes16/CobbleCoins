@@ -1,0 +1,12 @@
+{
+  "item.cobblecoins.cobblecoin": "Cobblecoin",
+  "item.cobblecoins.cobblecoin.description": "A small, low-value coin made from cobblestone.",
+
+  "item.cobblecoins.cobblenote": "Cobblenote",
+  "item.cobblecoins.cobblenote.description": "A note worth 64 Cobblecoins. Useful for larger transactions.",
+
+  "item.cobblecoins.cobblewad": "Cobblewad",
+  "item.cobblecoins.cobblewad.description": "A wad worth 64 Cobblenotes (4096 Cobblecoins). For bulk value storage.",
+
+  "itemGroup.cobblecoins.currency": "CobbleCoins"
+}

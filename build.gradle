@@ -14,15 +14,15 @@ tasks.named('wrapper', Wrapper).configure {
     distributionType = Wrapper.DistributionType.BIN
 }
 
-version = mod_version
-group = mod_group_id
+version = 1.0
+group = fr.lapsito.cobblecoins
 
 repositories {
     // Add here additional repositories if required by some of the dependencies below.
 }
 
 base {
-    archivesName = mod_id
+    archivesName = "cobblecoins"
 }
 
 // Mojang ships Java 21 to end users in 1.21, so mods should target Java 21.
@@ -47,13 +47,13 @@ neoForge {
             client()
 
             // Comma-separated list of namespaces to load gametests from. Empty = all namespaces.
-            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+            systemProperty 'neoforge.enabledGameTestNamespaces', "cobblecoins"
         }
 
         server {
             server()
             programArgument '--nogui'
-            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+            systemProperty 'neoforge.enabledGameTestNamespaces', "cobblecoins"
         }
 
         // This run config launches GameTestServer and runs all registered gametests, then exits.
@@ -61,7 +61,7 @@ neoForge {
         // The gametest system is also enabled by default for other run configs under the /test command.
         gameTestServer {
             type = "gameTestServer"
-            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+            systemProperty 'neoforge.enabledGameTestNamespaces', "cobblecoins"
         }
 
         data {
@@ -71,7 +71,7 @@ neoForge {
             // gameDirectory = project.file('run-data')
 
             // Specify the modid for data generation, where to output the resulting resource, and where to look for existing resources.
-            programArguments.addAll '--mod', project.mod_id, '--all', '--output', file('src/generated/resources/').getAbsolutePath(), '--existing', file('src/main/resources/').getAbsolutePath()
+            programArguments.addAll '--mod', "cobblecoins", '--all', '--output', file('src/generated/resources/').getAbsolutePath(), '--existing', file('src/main/resources/').getAbsolutePath()
         }
 
         // applies to all the run configs above
@@ -94,7 +94,7 @@ neoForge {
         // define mod <-> source bindings
         // these are used to tell the game which sources are for which mod
         // multi mod projects should define one per mod
-        "${mod_id}" {
+        "cobblecoins" {
             sourceSet(sourceSets.main)
         }
     }
@@ -133,6 +133,9 @@ dependencies {
     // For more info:
     // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
     // http://www.gradle.org/docs/current/userguide/dependency_management.html
+
+    //add dependency to cobblemon 1.7.1
+    implementation "com.cobblemon:cobblemon-forge-1.21.1:1.7.1"
 }
 
 // This block of code expands all declared replace properties in the specified resource targets.

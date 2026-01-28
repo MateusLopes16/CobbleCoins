@@ -1,8 +1,8 @@
 package fr.lapsito.cobblecoins;
 
-import net.minecraftforge.eventbus.api.IEventBus;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.neoforged.eventbus.api.IEventBus;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.javafmlmod.FMLJavaModLoadingContext;
 
 @Mod(CobbleCoinsMod.MODID)
 public class CobbleCoinsMod {

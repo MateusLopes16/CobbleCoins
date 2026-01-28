@@ -1,6 +1,6 @@
 package fr.lapsito.cobblecoins;
 
-import net.neoforged.eventbus.api.IEventBus;
+import net.neoforged.eventbus.api.listener.IEventBus;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.javafmlmod.FMLJavaModLoadingContext;
 

@@ -1,6 +1,6 @@
 package fr.lapsito.cobblecoins.items.coins.impl;
 
-import fr.lapsito.cobblecoins.items.api.Currency;
+import fr.lapsito.cobblecoins.items.coins.api.Currency;
 
 /**
  * Base implementation for currencies providing common fields and behavior.

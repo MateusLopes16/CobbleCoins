@@ -1,15 +1,15 @@
 package fr.lapsito.cobblecoins.items;
 
 import fr.lapsito.cobblecoins.CobbleCoinsMod;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.world.item.Item;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredRegister;
-import net.neoforged.neoforge.registries.NeoForgeRegistries;
 import net.neoforged.neoforge.registries.RegistryObject;
 
 /** Registers mod items. */
 public final class ModItems {
-    public static final DeferredRegister<Item> ITEMS = DeferredRegister.create(NeoForgeRegistries.ITEMS, CobbleCoinsMod.MODID);
+    public static final DeferredRegister<Item> ITEMS = DeferredRegister.create(Registries.ITEM, CobbleCoinsMod.MODID);
 
     public static final RegistryObject<Item> COBBLE_COIN = ITEMS.register("cobblecoin",
             () -> new Item(new Item.Properties()));

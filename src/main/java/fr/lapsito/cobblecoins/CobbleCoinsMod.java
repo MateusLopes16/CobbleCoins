@@ -10,6 +10,6 @@ public class CobbleCoinsMod {
 
     public CobbleCoinsMod() {
         IEventBus bus = FMLJavaModLoadingContext.get().getModEventBus();
-        items.ModItems.register(bus);
+        fr.lapsito.cobblecoins.items.ModItems.register(bus);
     }
 }

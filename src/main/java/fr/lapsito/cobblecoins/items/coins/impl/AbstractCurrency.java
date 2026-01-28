@@ -38,7 +38,6 @@ public abstract class AbstractCurrency implements Currency {
         return stackingValue;
     }
 
-    @Override
     public String toString() {
         return displayName + " (id=" + id + ", value=" + stackingValue + ", maxStack=" + maxStackSize + ")";
     }

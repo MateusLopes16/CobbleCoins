@@ -1,4 +1,4 @@
-package fr.lapsito.cobblecoins.items.impl;
+package fr.lapsito.cobblecoins.items.coins.impl;
 
 /** Cobblewad: 64 cobblenotes = 4096 cobblecoins. */
 public final class CobbleWad extends AbstractCurrency {

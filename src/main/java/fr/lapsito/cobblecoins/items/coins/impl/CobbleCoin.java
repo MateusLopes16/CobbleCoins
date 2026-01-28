@@ -1,4 +1,4 @@
-package fr.lapsito.cobblecoins.items.impl;
+package fr.lapsito.cobblecoins.items.coins.impl;
 
 /** Single cobblecoin, base unit (value = 1). */
 public final class CobbleCoin extends AbstractCurrency {

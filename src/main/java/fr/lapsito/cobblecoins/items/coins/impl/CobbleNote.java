@@ -1,4 +1,4 @@
-package fr.lapsito.cobblecoins.items.impl;
+package fr.lapsito.cobblecoins.items.coins.impl;
 
 /** Cobblenote: 64 cobblecoins. */
 public final class CobbleNote extends AbstractCurrency {

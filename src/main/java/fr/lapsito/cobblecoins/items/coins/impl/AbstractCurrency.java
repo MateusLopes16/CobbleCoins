@@ -1,4 +1,4 @@
-package fr.lapsito.cobblecoins.items.impl;
+package fr.lapsito.cobblecoins.items.coins.impl;
 
 import fr.lapsito.cobblecoins.items.api.Currency;
 
@@ -18,22 +18,18 @@ public abstract class AbstractCurrency implements Currency {
         this.stackingValue = stackingValue;
     }
 
-    @Override
     public String getId() {
         return id;
     }
 
-    @Override
     public String getDisplayName() {
         return displayName;
     }
 
-    @Override
     public int getMaxStackSize() {
         return maxStackSize;
     }
 
-    @Override
     public long getStackingValue() {
         return stackingValue;
     }

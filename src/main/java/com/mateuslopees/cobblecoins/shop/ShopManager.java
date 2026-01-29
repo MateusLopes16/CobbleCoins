@@ -74,6 +74,7 @@ public class ShopManager {
                             ShopItem shopItem = new ShopItem();
                             shopItem.itemId = itemObj.has("item") ? itemObj.get("item").getAsString() : "";
                             shopItem.price = itemObj.has("price") ? itemObj.get("price").getAsLong() : 0;
+                            shopItem.currency = itemObj.has("currency") ? itemObj.get("currency").getAsString() : "cobblecoins:bank";
                             shopItem.category = categoryName;
                             buyShop.add(shopItem);
                         }
@@ -94,6 +95,7 @@ public class ShopManager {
                             ShopItem shopItem = new ShopItem();
                             shopItem.itemId = itemObj.has("item") ? itemObj.get("item").getAsString() : "";
                             shopItem.price = itemObj.has("price") ? itemObj.get("price").getAsLong() : 0;
+                            shopItem.currency = itemObj.has("currency") ? itemObj.get("currency").getAsString() : "cobblecoins:bank";
                             shopItem.category = categoryName;
                             sellShop.add(shopItem);
                             sellPrices.put(shopItem.itemId, shopItem.price);
@@ -156,6 +158,7 @@ public class ShopManager {
                     JsonObject itemObj = new JsonObject();
                     itemObj.addProperty("item", item.itemId);
                     itemObj.addProperty("price", item.price);
+                    itemObj.addProperty("currency", item.currency);
                     content.add(itemObj);
                 }
                 categoryObj.add("content", content);
@@ -179,6 +182,7 @@ public class ShopManager {
                     JsonObject itemObj = new JsonObject();
                     itemObj.addProperty("item", item.itemId);
                     itemObj.addProperty("price", item.price);
+                    itemObj.addProperty("currency", item.currency);
                     content.add(itemObj);
                 }
                 categoryObj.add("content", content);
@@ -202,6 +206,7 @@ public class ShopManager {
             JsonObject itemObj = new JsonObject();
             itemObj.addProperty("item", item.itemId);
             itemObj.addProperty("price", item.price);
+            itemObj.addProperty("currency", item.currency);
             itemObj.addProperty("category", item.category);
             buyArray.add(itemObj);
         }
@@ -212,6 +217,7 @@ public class ShopManager {
             JsonObject itemObj = new JsonObject();
             itemObj.addProperty("item", item.itemId);
             itemObj.addProperty("price", item.price);
+            itemObj.addProperty("currency", item.currency);
             itemObj.addProperty("category", item.category);
             sellArray.add(itemObj);
         }
@@ -239,13 +245,34 @@ public class ShopManager {
         }
         
         long totalCost = shopItem.price * amount;
+        String currencyName = getCurrencyDisplayName(shopItem.currency);
         
-        if (!BankAccountManager.removeBalance(player.getUUID(), totalCost)) {
-            player.displayClientMessage(
-                    Component.translatable("message.cobblecoins.insufficient_funds")
-                            .withStyle(ChatFormatting.RED),
-                    false);
-            return;
+        // Check and deduct currency
+        if (shopItem.useBankBalance()) {
+            // Use bank balance (CobbleCoins)
+            if (!BankAccountManager.removeBalance(player.getUUID(), totalCost)) {
+                player.displayClientMessage(
+                        Component.translatable("message.cobblecoins.insufficient_funds")
+                                .withStyle(ChatFormatting.RED),
+                        false);
+                return;
+            }
+        } else {
+            // Use item-based currency
+            int playerHas = countItemInInventory(player, shopItem.currency);
+            if (playerHas < totalCost) {
+                player.displayClientMessage(
+                        Component.literal("§cYou need §e" + totalCost + " " + currencyName + "§c but only have §e" + playerHas + "§c!"),
+                        false);
+                return;
+            }
+            if (!removeItemFromInventory(player, shopItem.currency, (int) totalCost)) {
+                player.displayClientMessage(
+                        Component.translatable("message.cobblecoins.purchase_error")
+                                .withStyle(ChatFormatting.RED),
+                        false);
+                return;
+            }
         }
         
         // Give item to player
@@ -260,12 +287,16 @@ public class ShopManager {
             }
             
             player.displayClientMessage(
-                    Component.translatable("message.cobblecoins.purchase_success", amount, item.getDescription())
+                    Component.literal("§aPurchased §e" + amount + "x " + item.getDescription().getString() + "§a for §e" + totalCost + " " + currencyName + "§a!")
                             .withStyle(ChatFormatting.GREEN),
                     false);
         } catch (Exception e) {
             // Refund on error
-            BankAccountManager.addBalance(player.getUUID(), totalCost);
+            if (shopItem.useBankBalance()) {
+                BankAccountManager.addBalance(player.getUUID(), totalCost);
+            } else {
+                giveItemToPlayer(player, shopItem.currency, (int) totalCost);
+            }
             player.displayClientMessage(
                     Component.translatable("message.cobblecoins.purchase_error")
                             .withStyle(ChatFormatting.RED),
@@ -292,9 +323,17 @@ public class ShopManager {
         }
         
         String itemId = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
-        Long price = sellPrices.get(itemId);
         
-        if (price == null) {
+        // Find the sell shop item to get price and currency
+        ShopItem sellItem = null;
+        for (ShopItem item : sellShop) {
+            if (item.itemId.equals(itemId)) {
+                sellItem = item;
+                break;
+            }
+        }
+        
+        if (sellItem == null) {
             player.displayClientMessage(
                     Component.translatable("message.cobblecoins.item_not_sellable")
                             .withStyle(ChatFormatting.RED),
@@ -303,13 +342,20 @@ public class ShopManager {
         }
         
         int sellAmount = Math.min(amount, stack.getCount());
-        long totalPrice = price * sellAmount;
+        long totalPrice = sellItem.price * sellAmount;
+        String currencyName = getCurrencyDisplayName(sellItem.currency);
         
         stack.shrink(sellAmount);
-        BankAccountManager.addBalance(player.getUUID(), totalPrice);
+        
+        // Give currency reward
+        if (sellItem.useBankBalance()) {
+            BankAccountManager.addBalance(player.getUUID(), totalPrice);
+        } else {
+            giveItemToPlayer(player, sellItem.currency, (int) totalPrice);
+        }
         
         player.displayClientMessage(
-                Component.translatable("message.cobblecoins.sell_success", sellAmount, stack.getItem().getDescription(), totalPrice)
+                Component.literal("§aSold §e" + sellAmount + "x " + stack.getItem().getDescription().getString() + "§a for §e" + totalPrice + " " + currencyName + "§a!")
                         .withStyle(ChatFormatting.GREEN),
                 false);
     }
@@ -317,14 +363,110 @@ public class ShopManager {
     public static class ShopItem {
         public String itemId;
         public long price;
+        public String currency; // "cobblecoins:bank" for bank balance, or any item ID like "minecraft:diamond"
         public String category;
 
-        public ShopItem() {}
+        public ShopItem() {
+            this.currency = "cobblecoins:bank";
+        }
 
         public ShopItem(String itemId, long price, String category) {
             this.itemId = itemId;
             this.price = price;
+            this.currency = "cobblecoins:bank";
             this.category = category;
+        }
+
+        public ShopItem(String itemId, long price, String currency, String category) {
+            this.itemId = itemId;
+            this.price = price;
+            this.currency = currency;
+            this.category = category;
+        }
+
+        public boolean useBankBalance() {
+            return currency == null || currency.equals("cobblecoins:bank") || currency.isEmpty();
+        }
+    }
+
+    /**
+     * Count how many of a specific item the player has in their inventory
+     */
+    private static int countItemInInventory(ServerPlayer player, String itemId) {
+        try {
+            ResourceLocation itemLoc = ResourceLocation.parse(itemId);
+            Item targetItem = BuiltInRegistries.ITEM.get(itemLoc);
+            int count = 0;
+            for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+                ItemStack stack = player.getInventory().getItem(i);
+                if (!stack.isEmpty() && stack.getItem() == targetItem) {
+                    count += stack.getCount();
+                }
+            }
+            return count;
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    /**
+     * Remove a specific amount of an item from the player's inventory
+     * Returns true if successful, false if not enough items
+     */
+    private static boolean removeItemFromInventory(ServerPlayer player, String itemId, int amount) {
+        try {
+            ResourceLocation itemLoc = ResourceLocation.parse(itemId);
+            Item targetItem = BuiltInRegistries.ITEM.get(itemLoc);
+            int remaining = amount;
+            
+            for (int i = 0; i < player.getInventory().getContainerSize() && remaining > 0; i++) {
+                ItemStack stack = player.getInventory().getItem(i);
+                if (!stack.isEmpty() && stack.getItem() == targetItem) {
+                    int toRemove = Math.min(remaining, stack.getCount());
+                    stack.shrink(toRemove);
+                    remaining -= toRemove;
+                }
+            }
+            return remaining == 0;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Give a specific amount of an item to the player
+     */
+    private static void giveItemToPlayer(ServerPlayer player, String itemId, int amount) {
+        try {
+            ResourceLocation itemLoc = ResourceLocation.parse(itemId);
+            Item item = BuiltInRegistries.ITEM.get(itemLoc);
+            
+            while (amount > 0) {
+                int stackSize = Math.min(amount, item.getDefaultMaxStackSize());
+                ItemStack stack = new ItemStack(item, stackSize);
+                if (!player.getInventory().add(stack)) {
+                    player.drop(stack, false);
+                }
+                amount -= stackSize;
+            }
+        } catch (Exception e) {
+            CobbleCoins.LOGGER.error("Failed to give item {} to player", itemId, e);
+        }
+    }
+
+    /**
+     * Get the display name for a currency
+     */
+    private static String getCurrencyDisplayName(String currency) {
+        if (currency == null || currency.equals("cobblecoins:bank") || currency.isEmpty()) {
+            return "CobbleCoins";
+        }
+        try {
+            ResourceLocation itemLoc = ResourceLocation.parse(currency);
+            Item item = BuiltInRegistries.ITEM.get(itemLoc);
+            return item.getDescription().getString();
+        } catch (Exception e) {
+            return currency;
         }
     }
 }

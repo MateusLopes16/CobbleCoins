@@ -330,7 +330,7 @@ public class ShopScreen extends Screen {
         ItemStack stack = selectedEntry.getItemStack();
         graphics.renderItem(stack, panelX + 8, panelY + 8);
         graphics.drawString(font, "§f" + selectedEntry.getDisplayName(), panelX + 30, panelY + 8, COLOR_TEXT);
-        graphics.drawString(font, "§7Unit price: §e" + formatPrice(selectedEntry.price) + " ¢", panelX + 30, panelY + 20, COLOR_TEXT_DIM);
+        graphics.drawString(font, "§7Unit price: §e" + formatPrice(selectedEntry.price) + " " + selectedEntry.getCurrencySymbol(), panelX + 30, panelY + 20, COLOR_TEXT_DIM);
         
         // Quantity controls - moved left and reorganized
         int qtyX = panelX + 150;
@@ -372,7 +372,8 @@ public class ShopScreen extends Screen {
         
         // Total and confirm button - positioned on the right
         long total = selectedEntry.price * quantity;
-        boolean canAfford = ClientBankData.getBalance() >= total || !showingBuyShop;
+        // For bank balance, we can check client-side. For item currency, always allow (server validates)
+        boolean canAfford = !showingBuyShop || !selectedEntry.usesBankBalance() || ClientBankData.getBalance() >= total;
         
         int confirmX = panelX + panelWidth - 60;
         int confirmY = panelY + 8;
@@ -389,7 +390,7 @@ public class ShopScreen extends Screen {
         String btnText = showingBuyShop ? "BUY" : "SELL";
         graphics.drawCenteredString(font, "§l" + btnText, confirmX + confirmWidth / 2, confirmY + 5, canAfford ? 0xFF000000 : COLOR_TEXT_DIM);
         
-        String totalStr = formatPrice(total) + " ¢";
+        String totalStr = formatPrice(total) + " " + selectedEntry.getCurrencySymbol();
         graphics.drawCenteredString(font, totalStr, confirmX + confirmWidth / 2, confirmY + 18, canAfford ? 0xFF000000 : COLOR_TEXT_DIM);
         
         if (!canAfford && showingBuyShop) {
@@ -417,7 +418,8 @@ public class ShopScreen extends Screen {
         if (selectedEntry != null) {
             long total = selectedEntry.price * quantity;
             String action = showingBuyShop ? "Cost" : "Earn";
-            String cartText = action + ": §e" + formatPrice(total) + " ¢ §7(" + quantity + "x " + selectedEntry.getDisplayName() + ")";
+            String currencySymbol = selectedEntry.getCurrencySymbol();
+            String cartText = action + ": §e" + formatPrice(total) + " " + currencySymbol + " §7(" + quantity + "x " + selectedEntry.getDisplayName() + ")";
             int cartTextWidth = font.width(cartText.replaceAll("§.", ""));
             graphics.drawString(font, cartText, barX + barWidth - cartTextWidth - 10, barY + 5, COLOR_TEXT_DIM);
         }
@@ -434,7 +436,8 @@ public class ShopScreen extends Screen {
                 tooltip.add(Component.literal("§f§l" + entry.getDisplayName()));
                 tooltip.add(Component.literal("§7Category: §e" + formatCategoryName(entry.category)));
                 tooltip.add(Component.literal(""));
-                tooltip.add(Component.literal((showingBuyShop ? "§aBuy" : "§6Sell") + " Price: §e" + formatPrice(entry.price) + " ¢"));
+                String currencyText = entry.getCurrencySymbol();
+                tooltip.add(Component.literal((showingBuyShop ? "§aBuy" : "§6Sell") + " Price: §e" + formatPrice(entry.price) + " " + currencyText));
                 tooltip.add(Component.literal("§8Click to select"));
                 
                 graphics.renderTooltip(font, tooltip, Optional.empty(), mouseX, mouseY);
@@ -612,10 +615,18 @@ public class ShopScreen extends Screen {
         long total = selectedEntry.price * quantity;
         
         if (showingBuyShop) {
-            if (ClientBankData.getBalance() >= total) {
+            // For item-based currency, we can't validate client-side (inventory is server-side)
+            // Just send the packet and let server validate
+            if (selectedEntry.usesBankBalance()) {
+                // Only do client-side validation for bank balance
+                if (ClientBankData.getBalance() >= total) {
+                    NetworkHandler.sendToServer(new ShopPurchasePacket(selectedEntry.itemId, quantity));
+                    // Optimistic update for bank balance only
+                    ClientBankData.setBalance(ClientBankData.getBalance() - total);
+                }
+            } else {
+                // For item currencies, just send the request - server will validate
                 NetworkHandler.sendToServer(new ShopPurchasePacket(selectedEntry.itemId, quantity));
-                // Optimistic update
-                ClientBankData.setBalance(ClientBankData.getBalance() - total);
             }
         } else {
             NetworkHandler.sendToServer(new ShopSellPacket(-1, quantity));
@@ -668,13 +679,16 @@ public class ShopScreen extends Screen {
         String itemId;
         String displayName;
         long price;
+        String currency;
         String category;
         ItemStack cachedStack;
+        ItemStack currencyStack;
 
         static ShopEntry fromJson(JsonObject json) {
             ShopEntry entry = new ShopEntry();
             entry.itemId = json.has("item") ? json.get("item").getAsString() : "";
             entry.price = json.has("price") ? json.get("price").getAsLong() : 0;
+            entry.currency = json.has("currency") ? json.get("currency").getAsString() : "cobblecoins:bank";
             entry.category = json.has("category") ? json.get("category").getAsString() : "misc";
             
             // Try to get display name from item registry
@@ -688,6 +702,17 @@ public class ShopScreen extends Screen {
                 entry.cachedStack = new ItemStack(Items.BARRIER);
             }
             
+            // Cache currency item stack for display
+            if (!entry.usesBankBalance()) {
+                try {
+                    ResourceLocation currencyLoc = ResourceLocation.parse(entry.currency);
+                    Item currencyItem = BuiltInRegistries.ITEM.get(currencyLoc);
+                    entry.currencyStack = new ItemStack(currencyItem);
+                } catch (Exception e) {
+                    entry.currencyStack = null;
+                }
+            }
+            
             return entry;
         }
 
@@ -697,6 +722,27 @@ public class ShopScreen extends Screen {
 
         ItemStack getItemStack() {
             return cachedStack != null ? cachedStack : new ItemStack(Items.BARRIER);
+        }
+        
+        boolean usesBankBalance() {
+            return currency == null || currency.isEmpty() || currency.equals("cobblecoins:bank");
+        }
+        
+        String getCurrencyDisplayName() {
+            if (usesBankBalance()) {
+                return "CobbleCoins";
+            }
+            if (currencyStack != null && !currencyStack.isEmpty()) {
+                return currencyStack.getItem().getDescription().getString();
+            }
+            return currency;
+        }
+        
+        String getCurrencySymbol() {
+            if (usesBankBalance()) {
+                return "¢";
+            }
+            return getCurrencyDisplayName();
         }
     }
 }

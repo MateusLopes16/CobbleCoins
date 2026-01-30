@@ -1,5 +1,6 @@
 package com.mateuslopees.cobblecoins.client;
 
+import com.mateuslopees.cobblecoins.client.screen.PlayerShopScreen;
 import com.mateuslopees.cobblecoins.client.screen.ShopScreen;
 import net.minecraft.client.Minecraft;
 import net.neoforged.api.distmarker.Dist;
@@ -20,6 +21,10 @@ public class ClientPacketHandler {
     
     public static void handleOpenShop(String shopData) {
         Minecraft.getInstance().setScreen(new ShopScreen(shopData));
+    }
+    
+    public static void handleOpenPlayerShop(String shopData) {
+        Minecraft.getInstance().setScreen(new PlayerShopScreen(shopData));
     }
     
     public static void handleTradeRequest(UUID fromPlayer, String fromPlayerName) {

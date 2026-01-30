@@ -169,25 +169,49 @@ public class ModCommands {
                     return 1;
                 }));
         
-        // /playershop - Player shop commands
+        // /myshop - Open your own shop (simple command)
+        dispatcher.register(Commands.literal("myshop")
+                .executes(context -> {
+                    if (context.getSource().getEntity() instanceof ServerPlayer player) {
+                        var shop = com.mateuslopees.cobblecoins.data.PlayerShopManager.getShop(player.getUUID());
+                        if (shop == null) {
+                            // Auto-create shop if it doesn't exist
+                            if (com.mateuslopees.cobblecoins.data.PlayerShopManager.createShop(player.getUUID(), player.getName().getString() + "'s Shop")) {
+                                player.displayClientMessage(
+                                        Component.literal("§aShop created! Opening your shop..."),
+                                        false);
+                            } else {
+                                player.displayClientMessage(
+                                        Component.literal("§cPlayer shops are disabled on this server!"),
+                                        false);
+                                return 0;
+                            }
+                        }
+                        com.mateuslopees.cobblecoins.data.PlayerShopManager.openOwnShop(player);
+                    }
+                    return 1;
+                }));
+        
+        // /playershop <player> - Visit another player's shop (simple command)
         dispatcher.register(Commands.literal("playershop")
-                .then(Commands.literal("create")
-                        .then(Commands.argument("name", StringArgumentType.greedyString())
-                                .executes(context -> {
-                                    if (context.getSource().getEntity() instanceof ServerPlayer player) {
-                                        String shopName = StringArgumentType.getString(context, "name");
-                                        if (com.mateuslopees.cobblecoins.data.PlayerShopManager.createShop(player.getUUID(), shopName)) {
-                                            player.displayClientMessage(
-                                                    Component.literal("§aShop '§e" + shopName + "§a' created!"),
-                                                    false);
-                                        } else {
-                                            player.displayClientMessage(
-                                                    Component.literal("§cYou already have a shop or shops are disabled!"),
-                                                    false);
-                                        }
-                                    }
-                                    return 1;
-                                })))
+                .then(Commands.argument("player", EntityArgument.player())
+                        .executes(context -> {
+                            if (context.getSource().getEntity() instanceof ServerPlayer player) {
+                                ServerPlayer shopOwner = EntityArgument.getPlayer(context, "player");
+                                var shop = com.mateuslopees.cobblecoins.data.PlayerShopManager.getShop(shopOwner.getUUID());
+                                if (shop != null) {
+                                    player.displayClientMessage(
+                                            Component.literal("§aVisiting §e" + shop.getName() + "§a..."),
+                                            false);
+                                    com.mateuslopees.cobblecoins.data.PlayerShopManager.openPlayerShop(player, shopOwner.getUUID());
+                                } else {
+                                    player.displayClientMessage(
+                                            Component.literal("§cThis player doesn't have a shop!"),
+                                            false);
+                                }
+                            }
+                            return 1;
+                        }))
                 .then(Commands.literal("list")
                         .executes(context -> {
                             if (context.getSource().getEntity() instanceof ServerPlayer player) {
@@ -202,97 +226,9 @@ public class ModCommands {
                                             false);
                                     shops.forEach((uuid, shop) -> {
                                         ServerPlayer owner = player.getServer().getPlayerList().getPlayer(uuid);
-                                        String ownerName = owner != null ? owner.getName().getString() : "Unknown";
+                                        String ownerName = owner != null ? owner.getName().getString() : "Offline";
                                         player.displayClientMessage(
-                                                Component.literal("§7  - §e" + shop.getName() + " §7by §f" + ownerName),
-                                                false);
-                                    });
-                                }
-                            }
-                            return 1;
-                        }))
-                .then(Commands.literal("visit")
-                        .then(Commands.argument("player", EntityArgument.player())
-                                .executes(context -> {
-                                    if (context.getSource().getEntity() instanceof ServerPlayer player) {
-                                        ServerPlayer shopOwner = EntityArgument.getPlayer(context, "player");
-                                        var shop = com.mateuslopees.cobblecoins.data.PlayerShopManager.getShop(shopOwner.getUUID());
-                                        if (shop != null) {
-                                            player.displayClientMessage(
-                                                    Component.literal("§aVisiting §e" + shop.getName() + "§a..."),
-                                                    false);
-                                            // TODO: Open player shop GUI
-                                            player.displayClientMessage(
-                                                    Component.literal("§7Player shop GUI coming soon! Use §e/playershop list §7to see shops."),
-                                                    false);
-                                        } else {
-                                            player.displayClientMessage(
-                                                    Component.literal("§cThis player doesn't have a shop!"),
-                                                    false);
-                                        }
-                                    }
-                                    return 1;
-                                })))
-                .then(Commands.literal("additem")
-                        .then(Commands.argument("price", LongArgumentType.longArg(1))
-                                .executes(context -> {
-                                    if (context.getSource().getEntity() instanceof ServerPlayer player) {
-                                        long price = LongArgumentType.getLong(context, "price");
-                                        var shop = com.mateuslopees.cobblecoins.data.PlayerShopManager.getShop(player.getUUID());
-                                        if (shop == null) {
-                                            player.displayClientMessage(
-                                                    Component.literal("§cYou don't have a shop! Use §e/playershop create <name>"),
-                                                    false);
-                                            return 0;
-                                        }
-                                        
-                                        net.minecraft.world.item.ItemStack heldItem = player.getMainHandItem();
-                                        if (heldItem.isEmpty()) {
-                                            player.displayClientMessage(
-                                                    Component.literal("§cHold an item in your hand to add it to your shop!"),
-                                                    false);
-                                            return 0;
-                                        }
-                                        
-                                        String itemId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(heldItem.getItem()).toString();
-                                        int count = heldItem.getCount();
-                                        
-                                        shop.addListing(itemId, count, price);
-                                        player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, net.minecraft.world.item.ItemStack.EMPTY);
-                                        
-                                        player.displayClientMessage(
-                                                Component.literal("§aAdded §e" + count + "x " + heldItem.getHoverName().getString() + 
-                                                        " §ato your shop for §6" + price + " ¢"),
-                                                false);
-                                        
-                                        com.mateuslopees.cobblecoins.data.PlayerShopManager.saveShops();
-                                    }
-                                    return 1;
-                                })))
-                .then(Commands.literal("myshop")
-                        .executes(context -> {
-                            if (context.getSource().getEntity() instanceof ServerPlayer player) {
-                                var shop = com.mateuslopees.cobblecoins.data.PlayerShopManager.getShop(player.getUUID());
-                                if (shop == null) {
-                                    player.displayClientMessage(
-                                            Component.literal("§cYou don't have a shop! Use §e/playershop create <name>"),
-                                            false);
-                                    return 0;
-                                }
-                                
-                                player.displayClientMessage(
-                                        Component.literal("§6§l⬢ Your Shop: §e" + shop.getName()),
-                                        false);
-                                var listings = shop.getListings();
-                                if (listings.isEmpty()) {
-                                    player.displayClientMessage(
-                                            Component.literal("§7  No items listed. Use §e/playershop additem <price>"),
-                                            false);
-                                } else {
-                                    listings.forEach(listing -> {
-                                        player.displayClientMessage(
-                                                Component.literal("§7  - §f" + listing.getQuantity() + "x " + 
-                                                        listing.getItemId() + " §7for §6" + listing.getPrice() + " ¢"),
+                                                Component.literal("§7  - §e" + shop.getName() + " §7by §f" + ownerName + " §7(§e/playershop " + ownerName + "§7)"),
                                                 false);
                                     });
                                 }

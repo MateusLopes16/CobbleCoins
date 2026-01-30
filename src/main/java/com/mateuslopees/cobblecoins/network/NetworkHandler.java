@@ -33,6 +33,12 @@ public class NetworkHandler {
                 OpenShopPacket::handle
         );
 
+        registrar.playToClient(
+                OpenPlayerShopPacket.TYPE,
+                OpenPlayerShopPacket.STREAM_CODEC,
+                OpenPlayerShopPacket::handle
+        );
+
         // Server-bound packets
         registrar.playToServer(
                 ShopPurchasePacket.TYPE,

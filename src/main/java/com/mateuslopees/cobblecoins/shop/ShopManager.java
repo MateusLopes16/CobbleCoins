@@ -385,7 +385,11 @@ public class ShopManager {
         }
 
         public boolean useBankBalance() {
-            return currency == null || currency.equals("cobblecoins:bank") || currency.isEmpty();
+            return currency == null || currency.isEmpty() 
+                    || currency.equals("cobblecoins:bank")
+                    || currency.equals("cobblecoins:cobblecoin")
+                    || currency.equals("cobblecoins:silver_cobblecoin")
+                    || currency.equals("cobblecoins:gold_cobblecoin");
         }
     }
 

@@ -2,9 +2,13 @@ package com.mateuslopees.cobblecoins.data;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
 import com.mateuslopees.cobblecoins.CobbleCoins;
 import com.mateuslopees.cobblecoins.config.CobbleCoinsConfig;
+import com.mateuslopees.cobblecoins.network.NetworkHandler;
+import com.mateuslopees.cobblecoins.network.packet.OpenPlayerShopPacket;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
@@ -62,6 +66,76 @@ public class PlayerShopManager {
     
     public static Map<UUID, PlayerShop> getAllShops() {
         return new HashMap<>(shops);
+    }
+    
+    /**
+     * Opens a player shop GUI for the viewer
+     */
+    public static void openPlayerShop(ServerPlayer viewer, UUID shopOwnerId) {
+        PlayerShop shop = getShop(shopOwnerId);
+        if (shop == null) {
+            viewer.displayClientMessage(
+                    Component.literal("This player doesn't have a shop!")
+                            .withStyle(ChatFormatting.RED),
+                    false);
+            return;
+        }
+        
+        // Get owner name
+        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+        String ownerName = "Unknown";
+        if (server != null) {
+            ServerPlayer owner = server.getPlayerList().getPlayer(shopOwnerId);
+            if (owner != null) {
+                ownerName = owner.getName().getString();
+            } else {
+                // Try to get from game profile cache
+                var profile = server.getProfileCache();
+                if (profile != null) {
+                    var optional = profile.get(shopOwnerId);
+                    if (optional.isPresent()) {
+                        ownerName = optional.get().getName();
+                    }
+                }
+            }
+        }
+        
+        // Build JSON data for the shop
+        JsonObject shopData = new JsonObject();
+        shopData.addProperty("ownerId", shopOwnerId.toString());
+        shopData.addProperty("ownerName", ownerName);
+        shopData.addProperty("shopName", shop.getName());
+        shopData.addProperty("isOwnShop", viewer.getUUID().equals(shopOwnerId));
+        
+        JsonArray listingsArray = new JsonArray();
+        for (ShopListing listing : shop.getListings()) {
+            JsonObject listingJson = new JsonObject();
+            listingJson.addProperty("id", listing.getId());
+            listingJson.addProperty("itemId", listing.getItemId());
+            listingJson.addProperty("amount", listing.getAmount());
+            listingJson.addProperty("price", listing.getPrice());
+            listingJson.addProperty("sellerId", listing.getSellerId().toString());
+            listingJson.addProperty("sellerName", ownerName);
+            listingsArray.add(listingJson);
+        }
+        shopData.add("listings", listingsArray);
+        
+        NetworkHandler.sendToPlayer(new OpenPlayerShopPacket(GSON.toJson(shopData)), viewer);
+    }
+    
+    /**
+     * Opens the viewer's own shop
+     */
+    public static void openOwnShop(ServerPlayer player) {
+        PlayerShop shop = getShop(player.getUUID());
+        if (shop == null) {
+            player.displayClientMessage(
+                    Component.literal("You don't have a shop! Use /playershop create <name>")
+                            .withStyle(ChatFormatting.RED),
+                    false);
+            return;
+        }
+        openPlayerShop(player, player.getUUID());
     }
 
     public static void listItem(ServerPlayer player, String itemId, int amount, long price) {

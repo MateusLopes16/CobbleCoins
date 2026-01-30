@@ -26,9 +26,9 @@ public class ShopScreen extends Screen {
     private static final int GUI_WIDTH = 340;
     private static final int GUI_HEIGHT = 220;
     private static final int CATEGORY_WIDTH = 90;
-    private static final int ITEM_SIZE = 24;
-    private static final int ITEMS_PER_ROW = 6;
-    private static final int ITEMS_PER_PAGE = 18; // 6x3 grid
+    private static final int ITEM_SIZE = 32;
+    private static final int ITEMS_PER_ROW = 5;
+    private static final int ITEMS_PER_PAGE = 10; // 5x2 grid
     
     // Colors
     private static final int COLOR_BG_DARK = 0xF0141414;
@@ -164,8 +164,8 @@ public class ShopScreen extends Screen {
         int tabWidth = 60;
         int tabHeight = 20;
         
-        // Shop title
-        graphics.drawString(font, "§l⬢ COBBLESHOP", guiLeft + 10, headerY + 5, COLOR_ACCENT);
+        // Shop title - no formatting codes to avoid duplication
+        graphics.drawString(font, "COBBLESHOP", guiLeft + 10, headerY + 5, COLOR_ACCENT, false);
         
         // Tab buttons
         int tabX = guiLeft + GUI_WIDTH - tabWidth * 2 - 15;
@@ -174,14 +174,16 @@ public class ShopScreen extends Screen {
         boolean buyHovered = isMouseOver(mouseX, mouseY, tabX, headerY, tabWidth, tabHeight);
         int buyColor = showingBuyShop ? COLOR_ACCENT_BUY : (buyHovered ? COLOR_BG_HOVER : COLOR_BG_PANEL);
         drawPanel(graphics, tabX, headerY, tabWidth, tabHeight, buyColor, showingBuyShop ? COLOR_ACCENT_BUY : COLOR_BORDER);
-        graphics.drawCenteredString(font, "BUY", tabX + tabWidth / 2, headerY + 6, showingBuyShop ? 0xFF000000 : COLOR_TEXT);
+        int buyTextX = tabX + (tabWidth - font.width("BUY")) / 2;
+        graphics.drawString(font, "BUY", buyTextX, headerY + 6, showingBuyShop ? 0xFF000000 : COLOR_TEXT, false);
         
         // Sell tab
         int sellTabX = tabX + tabWidth + 5;
         boolean sellHovered = isMouseOver(mouseX, mouseY, sellTabX, headerY, tabWidth, tabHeight);
         int sellColor = !showingBuyShop ? COLOR_ACCENT_SELL : (sellHovered ? COLOR_BG_HOVER : COLOR_BG_PANEL);
         drawPanel(graphics, sellTabX, headerY, tabWidth, tabHeight, sellColor, !showingBuyShop ? COLOR_ACCENT_SELL : COLOR_BORDER);
-        graphics.drawCenteredString(font, "SELL", sellTabX + tabWidth / 2, headerY + 6, !showingBuyShop ? 0xFF000000 : COLOR_TEXT);
+        int sellTextX = sellTabX + (tabWidth - font.width("SELL")) / 2;
+        graphics.drawString(font, "SELL", sellTextX, headerY + 6, !showingBuyShop ? 0xFF000000 : COLOR_TEXT, false);
     }
 
     private void renderCategorySidebar(GuiGraphics graphics, int mouseX, int mouseY) {
@@ -192,8 +194,11 @@ public class ShopScreen extends Screen {
         // Sidebar background
         drawPanel(graphics, sidebarX, sidebarY, CATEGORY_WIDTH, sidebarHeight, COLOR_BG_PANEL, COLOR_BORDER);
         
-        // Category header
-        graphics.drawString(font, "§nCategories", sidebarX + 5, sidebarY + 4, COLOR_TEXT_DIM);
+        // Category header - use plain text, no formatting codes that could cause visual issues
+        graphics.drawString(font, "Categories", sidebarX + 5, sidebarY + 4, COLOR_TEXT_DIM, false);
+        // Draw underline manually
+        int headerWidth = font.width("Categories");
+        graphics.fill(sidebarX + 5, sidebarY + 14, sidebarX + 5 + headerWidth, sidebarY + 15, COLOR_TEXT_DIM);
         
         // Categories list
         Map<String, List<ShopEntry>> categories = getCurrentCategories();
@@ -229,11 +234,11 @@ public class ShopScreen extends Screen {
             if (font.width(displayName) > CATEGORY_WIDTH - 30) {
                 displayName = displayName.substring(0, Math.min(displayName.length(), 8)) + "..";
             }
-            graphics.drawString(font, displayName, sidebarX + 5, currentCatY + 3, selected ? COLOR_TEXT : COLOR_TEXT_DIM);
+            graphics.drawString(font, displayName, sidebarX + 5, currentCatY + 3, selected ? COLOR_TEXT : COLOR_TEXT_DIM, false);
             
-            // Item count badge
-            String countStr = "§7(" + itemCount + ")";
-            graphics.drawString(font, countStr, sidebarX + CATEGORY_WIDTH - font.width(countStr) - 5, currentCatY + 3, COLOR_TEXT_DIM);
+            // Item count badge - no formatting codes to avoid duplication
+            String countStr = "(" + itemCount + ")";
+            graphics.drawString(font, countStr, sidebarX + CATEGORY_WIDTH - font.width(countStr) - 5, currentCatY + 3, COLOR_TEXT_DIM, false);
         }
         
         // Scroll indicators
@@ -279,15 +284,17 @@ public class ShopScreen extends Screen {
             int borderColor = selected ? COLOR_ACCENT : (hovered ? COLOR_BORDER_LIGHT : COLOR_BORDER);
             drawPanel(graphics, itemX, itemY, ITEM_SIZE, ITEM_SIZE, slotColor, borderColor);
             
-            // Render item
+            // Render item centered in the slot
             ItemStack stack = entry.getItemStack();
-            graphics.renderItem(stack, itemX + 4, itemY + 4);
+            int itemRenderX = itemX + (ITEM_SIZE - 16) / 2;
+            int itemRenderY = itemY + (ITEM_SIZE - 16) / 2 - 2;
+            graphics.renderItem(stack, itemRenderX, itemRenderY);
             
-            // Price indicator (small)
+            // Price indicator (small) at bottom of slot
             String priceStr = formatCompactPrice(entry.price);
             int priceWidth = font.width(priceStr);
-            graphics.fill(itemX + ITEM_SIZE - priceWidth - 2, itemY + ITEM_SIZE - 9, itemX + ITEM_SIZE, itemY + ITEM_SIZE, 0xCC000000);
-            graphics.drawString(font, priceStr, itemX + ITEM_SIZE - priceWidth - 1, itemY + ITEM_SIZE - 8, COLOR_ACCENT, false);
+            graphics.fill(itemX + ITEM_SIZE - priceWidth - 2, itemY + ITEM_SIZE - 10, itemX + ITEM_SIZE, itemY + ITEM_SIZE, 0xCC000000);
+            graphics.drawString(font, priceStr, itemX + ITEM_SIZE - priceWidth - 1, itemY + ITEM_SIZE - 9, COLOR_ACCENT, false);
         }
         
         // Page navigation
@@ -329,8 +336,26 @@ public class ShopScreen extends Screen {
         // Item icon and name
         ItemStack stack = selectedEntry.getItemStack();
         graphics.renderItem(stack, panelX + 8, panelY + 8);
-        graphics.drawString(font, "§f" + selectedEntry.getDisplayName(), panelX + 30, panelY + 8, COLOR_TEXT);
-        graphics.drawString(font, "§7Unit price: §e" + formatPrice(selectedEntry.price) + " " + selectedEntry.getCurrencySymbol(), panelX + 30, panelY + 20, COLOR_TEXT_DIM);
+        graphics.drawString(font, selectedEntry.getDisplayName(), panelX + 30, panelY + 8, COLOR_TEXT, false);
+        
+        // Unit price with currency icon
+        String priceLabel = "Unit price: ";
+        graphics.drawString(font, priceLabel, panelX + 30, panelY + 20, COLOR_TEXT_DIM, false);
+        int priceLabelWidth = font.width(priceLabel);
+        String priceValue = formatPrice(selectedEntry.price);
+        graphics.drawString(font, priceValue, panelX + 30 + priceLabelWidth, panelY + 20, COLOR_ACCENT, false);
+        int priceValueWidth = font.width(priceValue);
+        // Render currency icon or symbol
+        if (selectedEntry.usesBankBalance()) {
+            graphics.drawString(font, " CobbleCoin", panelX + 30 + priceLabelWidth + priceValueWidth, panelY + 20, COLOR_TEXT_DIM, false);
+        } else if (selectedEntry.currencyStack != null && !selectedEntry.currencyStack.isEmpty()) {
+            // Render small currency item icon
+            graphics.pose().pushPose();
+            graphics.pose().translate(panelX + 30 + priceLabelWidth + priceValueWidth + 2, panelY + 16, 0);
+            graphics.pose().scale(0.5f, 0.5f, 1.0f);
+            graphics.renderItem(selectedEntry.currencyStack, 0, 0);
+            graphics.pose().popPose();
+        }
         
         // Quantity controls - moved left and reorganized
         int qtyX = panelX + 150;
@@ -388,10 +413,27 @@ public class ShopScreen extends Screen {
         
         drawPanel(graphics, confirmX, confirmY, confirmWidth, confirmHeight, confirmColor, confirmColor);
         String btnText = showingBuyShop ? "BUY" : "SELL";
-        graphics.drawCenteredString(font, "§l" + btnText, confirmX + confirmWidth / 2, confirmY + 5, canAfford ? 0xFF000000 : COLOR_TEXT_DIM);
+        graphics.drawCenteredString(font, btnText, confirmX + confirmWidth / 2, confirmY + 5, canAfford ? 0xFF000000 : COLOR_TEXT_DIM);
         
-        String totalStr = formatPrice(total) + " " + selectedEntry.getCurrencySymbol();
-        graphics.drawCenteredString(font, totalStr, confirmX + confirmWidth / 2, confirmY + 18, canAfford ? 0xFF000000 : COLOR_TEXT_DIM);
+        // Render total with currency icon
+        String totalValue = formatPrice(total);
+        int totalValueWidth = font.width(totalValue);
+        if (selectedEntry.usesBankBalance()) {
+            graphics.drawCenteredString(font, totalValue + " CobbleCoin", confirmX + confirmWidth / 2, confirmY + 18, canAfford ? 0xFF000000 : COLOR_TEXT_DIM);
+        } else if (selectedEntry.currencyStack != null && !selectedEntry.currencyStack.isEmpty()) {
+            // Draw price value and small currency icon
+            int iconSize = 8;
+            int totalWidth = totalValueWidth + iconSize + 2;
+            int startX = confirmX + (confirmWidth - totalWidth) / 2;
+            graphics.drawString(font, totalValue, startX, confirmY + 18, canAfford ? 0xFF000000 : COLOR_TEXT_DIM, false);
+            graphics.pose().pushPose();
+            graphics.pose().translate(startX + totalValueWidth + 2, confirmY + 14, 0);
+            graphics.pose().scale(0.5f, 0.5f, 1.0f);
+            graphics.renderItem(selectedEntry.currencyStack, 0, 0);
+            graphics.pose().popPose();
+        } else {
+            graphics.drawCenteredString(font, totalValue, confirmX + confirmWidth / 2, confirmY + 18, canAfford ? 0xFF000000 : COLOR_TEXT_DIM);
+        }
         
         if (!canAfford && showingBuyShop) {
             graphics.drawString(font, "§cInsufficient funds!", panelX + 30, panelY + 35, COLOR_TEXT_ERROR);
@@ -417,11 +459,35 @@ public class ShopScreen extends Screen {
         // Cart summary (if item selected)
         if (selectedEntry != null) {
             long total = selectedEntry.price * quantity;
-            String action = showingBuyShop ? "Cost" : "Earn";
-            String currencySymbol = selectedEntry.getCurrencySymbol();
-            String cartText = action + ": §e" + formatPrice(total) + " " + currencySymbol + " §7(" + quantity + "x " + selectedEntry.getDisplayName() + ")";
-            int cartTextWidth = font.width(cartText.replaceAll("§.", ""));
-            graphics.drawString(font, cartText, barX + barWidth - cartTextWidth - 10, barY + 5, COLOR_TEXT_DIM);
+            String action = showingBuyShop ? "Cost: " : "Earn: ";
+            String itemInfo = " (" + quantity + "x " + selectedEntry.getDisplayName() + ")";
+            String priceText = formatPrice(total);
+            
+            // Calculate total width
+            int actionWidth = font.width(action);
+            int priceWidth = font.width(priceText);
+            int iconWidth = selectedEntry.usesBankBalance() ? font.width(" CobbleCoin") : 10; // 8px icon + 2px spacing
+            int itemInfoWidth = font.width(itemInfo);
+            int totalWidth = actionWidth + priceWidth + iconWidth + itemInfoWidth;
+            
+            int startX = barX + barWidth - totalWidth - 10;
+            graphics.drawString(font, action, startX, barY + 5, COLOR_TEXT_DIM, false);
+            graphics.drawString(font, priceText, startX + actionWidth, barY + 5, COLOR_ACCENT, false);
+            
+            if (selectedEntry.usesBankBalance()) {
+                graphics.drawString(font, " CobbleCoin", startX + actionWidth + priceWidth, barY + 5, COLOR_TEXT_DIM, false);
+                graphics.drawString(font, itemInfo, startX + actionWidth + priceWidth + iconWidth, barY + 5, COLOR_TEXT_DIM, false);
+            } else if (selectedEntry.currencyStack != null && !selectedEntry.currencyStack.isEmpty()) {
+                // Small currency icon
+                graphics.pose().pushPose();
+                graphics.pose().translate(startX + actionWidth + priceWidth + 2, barY + 1, 0);
+                graphics.pose().scale(0.5f, 0.5f, 1.0f);
+                graphics.renderItem(selectedEntry.currencyStack, 0, 0);
+                graphics.pose().popPose();
+                graphics.drawString(font, itemInfo, startX + actionWidth + priceWidth + 10, barY + 5, COLOR_TEXT_DIM, false);
+            } else {
+                graphics.drawString(font, itemInfo, startX + actionWidth + priceWidth, barY + 5, COLOR_TEXT_DIM, false);
+            }
         }
     }
 
